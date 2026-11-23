@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 DHT11 Dashboard</title>
+</head>
+<body>
+ <div class="dashboard-container">
+
+    <div class="card" style="text-align: center; padding: 30px; margin: 30px auto; background: #69769b; color: #ffffff; font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; font-weight: bold;">
+      <div>
+        <h1>Dashboard</h1>
+        <h2 class="subtitle">Halaman Tampil Suhu dan Kelembapan</h2>
+      </div>
+      <div class="status-badge online" id="statusBadge">
+        <span id="statusText">ONLINE</span>
+      </div>
+    </div>
+
+    <div class="metrics-grid" style="text-align: center; font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; font-weight: bold;">
+      <div class="metric-item">
+        <span class="metric-label">Temperature</span>
+        <div class="metric-value temp" id="tempValue">--&deg;C</div>
+        <span>Sensor DHT11</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">Humidity</span>
+        <div class="metric-value hum" id="humValue">--%</div>
+        <span>Digital</span>
+      </div>
+    </div>
+
+    <div class="card" style="text-align: center; font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; font-weight: bold;">
+      <h2>Hardware and Network</h2>
+
+      <!-- PERBAIKAN: Setiap ID dibuat unik agar JavaScript bisa menemukannya -->
+      <div class="info-row"><span class="k">Device IP Address</span><span class="v" id="infoIp">Connecting&hellip;</span></div>
+      <div class="info-row"><span class="k">WI-FI SSID</span><span class="v" id="infoSsid">--</span></div>
+      <div class="info-row"><span class="k">Signal</span><span class="v" id="infoRssi">--</span></div>
+      <div class="info-row"><span class="k">Firmware Uptime</span><span class="v" id="infoUptime">--</span></div>
+      <div class="info-row"><span class="k">Last Rest Poll</span><span class="v" id="infoLastPoll">Just now</span></div>
+    </div>
+
+ </div>
+
+ <script>
+  const tempValue = document.getElementById('tempValue');
+  const humValue = document.getElementById('humValue');
+  const statusBadge = document.getElementById('statusBadge');
+  const statusText = document.getElementById('statusText');
+  const infoIp = document.getElementById('infoIp');
+  const infoSsid = document.getElementById('infoSsid');
+  const infoRssi = document.getElementById('infoRssi');
+  const infoUptime = document.getElementById('infoUptime');
+  const infoLastPoll = document.getElementById('infoLastPoll');
+
+  function formatUptime(seconds) {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`; // PERBAIKAN: Ditambahkan return agar nilainya muncul
+  }
+
+  async function updateDashboard() {
+    try {
+      // Menggunakan '/api/now' agar jalur absolut terbaca dengan benar oleh server
+      const res = await fetch('/api/now');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      // Tampilkan nilai sensor
+      if (data.temp !== null) {
+        tempValue.innerHTML = data.temp.toFixed(1) + '<span>&deg;C</span>';
+      }
+      if (data.hum !== null) {
+        humValue.innerHTML = Math.round(data.hum) + '<span>%</span>';
+      }
+
+      // Perbarui sistem koneksi online
+      statusBadge.className = 'status-badge online';
+      statusText.textContent = 'ONLINE';
+
+      // Perbarui informasi diagnostik
+      infoIp.textContent = data.ip || '--';
+      infoSsid.textContent = data.ssid || '--';
+      infoRssi.textContent = (data.rssi || 0) + ' dBm';
+      infoUptime.textContent = formatUptime(data.uptime || 0);
+      infoLastPoll.textContent = new Date().toLocaleTimeString();
+    } catch (err) {
+      // Status berubah ke offline jika polling gagal
+      statusBadge.className = 'status-badge offline';
+      statusText.textContent = 'OFFLINE';
+    }
+  }
+
+  // PERBAIKAN: Eksekusi dipanggil di luar fungsi, lalu di-set intervalnya dengan benar
+  updateDashboard();
+  setInterval(updateDashboard, 2000);
+ </script>
+
+</body>
+</html>
