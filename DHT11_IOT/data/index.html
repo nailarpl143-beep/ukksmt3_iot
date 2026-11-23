@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 DHT11 Dashboard</title>
+</head>
+<body style="margin: 0; min-height: 100vh; background: #edf2f8; color: #52647d; font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;">
+
+ <div class="dashboard-container" style="max-width: 750px; margin: auto; padding: 20px;">
+
+    <div class="card" style="text-align: center; padding: 25px; margin: 20px auto; background: #dce7f4; color: #52647d; font-weight: bold; border-radius: 18px;">
+      <div>
+        <h1>Dashboard</h1>
+        <h2 class="subtitle" style="color: #7890ad; font-size: 18px;">Halaman Tampil Suhu dan Kelembapan</h2>
+      </div>
+      <div class="status-badge online" id="statusBadge" style="display: inline-block; padding: 8px 20px; border-radius: 30px; background: #d5e8dc; color: #54735f; font-size: 13px;">
+        <span id="statusText">ONLINE</span>
+      </div>
+    </div>
+
+    <div class="metrics-grid" style="text-align: center; font-weight: bold; display: flex; gap: 15px; margin: 20px auto;">
+      <div class="metric-item" style="flex: 1; background: #dce7f4; padding: 22px; border-radius: 18px;">
+        <span class="metric-label" style="color: #7890ad; font-size: 14px;">Temperature</span>
+        <div class="metric-value temp" id="tempValue" style="font-size: 35px; margin: 15px 0; color: #c18b78;">--&deg;C</div>
+        <span>Sensor DHT11</span>
+      </div>
+      <div class="metric-item" style="flex: 1; background: #dce7f4; padding: 22px; border-radius: 18px;">
+        <span class="metric-label" style="color: #7890ad; font-size: 14px;">Humidity</span>
+        <div class="metric-value hum" id="humValue" style="font-size: 35px; margin: 15px 0; color: #789ab8;">--%</div>
+        <span>Digital</span>
+      </div>
+    </div>
+
+    <div class="card" style="text-align: center; font-weight: bold; background: #dce7f4; color: #52647d; padding: 22px; border-radius: 18px;">
+      <h2>Hardware and Network</h2>
+
+      <div class="info-row" style="display: flex; justify-content: space-between; padding: 13px 5px; border-bottom: 1px solid #c5d5e8;">
+        <span class="k" style="color: #7890ad;">Device IP Address</span>
+        <span class="v" id="infoIp" style="color: #52647d;">Connecting&hellip;</span>
+      </div>
+
+      <div class="info-row" style="display: flex; justify-content: space-between; padding: 13px 5px; border-bottom: 1px solid #c5d5e8;">
+        <span class="k" style="color: #7890ad;">WI-FI SSID</span>
+        <span class="v" id="infoSsid" style="color: #52647d;">--</span>
+      </div>
+
+      <div class="info-row" style="display: flex; justify-content: space-between; padding: 13px 5px; border-bottom: 1px solid #c5d5e8;">
+        <span class="k" style="color: #7890ad;">Signal</span>
+        <span class="v" id="infoRssi" style="color: #52647d;">--</span>
+      </div>
+
+      <div class="info-row" style="display: flex; justify-content: space-between; padding: 13px 5px; border-bottom: 1px solid #c5d5e8;">
+        <span class="k" style="color: #7890ad;">Firmware Uptime</span>
+        <span class="v" id="infoUptime" style="color: #52647d;">--</span>
+      </div>
+
+      <div class="info-row" style="display: flex; justify-content: space-between; padding: 13px 5px;">
+        <span class="k" style="color: #7890ad;">Last Rest Poll</span>
+        <span class="v" id="infoLastPoll" style="color: #52647d;">Just now</span>
+      </div>
+    </div>
+
+ </div>
+
+ <script>
+  const tempValue = document.getElementById('tempValue');
+  const humValue = document.getElementById('humValue');
+  const statusBadge = document.getElementById('statusBadge');
+  const statusText = document.getElementById('statusText');
+  const infoIp = document.getElementById('infoIp');
+  const infoSsid = document.getElementById('infoSsid');
+  const infoRssi = document.getElementById('infoRssi');
+  const infoUptime = document.getElementById('infoUptime');
+  const infoLastPoll = document.getElementById('infoLastPoll');
+
+  function formatUptime(seconds) {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  async function updateDashboard() {
+    try {
+      const res = await fetch('/api/now');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      if (data.temp !== null) {
+        tempValue.innerHTML = data.temp.toFixed(1) + '<span>&deg;C</span>';
+      }
+      if (data.hum !== null) {
+        humValue.innerHTML = Math.round(data.hum) + '<span>%</span>';
+      }
+
+      statusBadge.className = 'status-badge online';
+      statusText.textContent = 'ONLINE';
+
+      infoIp.textContent = data.ip || '--';
+      infoSsid.textContent = data.ssid || '--';
+      infoRssi.textContent = (data.rssi || 0) + ' dBm';
+      infoUptime.textContent = formatUptime(data.uptime || 0);
+      infoLastPoll.textContent = new Date().toLocaleTimeString();
+    } catch (err) {
+      statusBadge.className = 'status-badge offline';
+      statusText.textContent = 'OFFLINE';
+    }
+  }
+
+  updateDashboard();
+  setInterval(updateDashboard, 2000);
+ </script>
+
+</body>
+</html>
